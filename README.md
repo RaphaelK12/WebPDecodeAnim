@@ -1,2 +1,2 @@
 # WebPDecodeAnim
-Decode webp animation images by use of libwebp
+NDK build for decoding webp animation images by use of libwebp
