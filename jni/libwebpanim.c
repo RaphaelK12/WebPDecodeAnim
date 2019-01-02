@@ -53,26 +53,6 @@ JNIEXPORT jint JNICALL Java_com_google_webp_libwebpAnimJNI_WebPAnimDecodeRGBA(JN
         LOGE("Error decoding file.\n Aborting.\n");
         return -2;
     } else {
-//        WebPOutputFileFormat format = PNG;
-//        const char *out = (*jenv)->GetStringUTFChars(jenv, jarg5, 0);
-//        for (int i = 0; i < image.num_frames; ++i) {
-//            W_CHAR out_file[1024];
-//            WebPDecBuffer buffer;
-//            WebPInitDecBuffer(&buffer);
-//            buffer.colorspace = MODE_RGBA;
-//            buffer.is_external_memory = 1;
-//            buffer.width = image.canvas_width;
-//            buffer.height = image.canvas_height;
-//            buffer.u.RGBA.rgba = image.frames[i].rgba;
-//            buffer.u.RGBA.stride = buffer.width * sizeof(uint32_t);
-//            buffer.u.RGBA.size = buffer.u.RGBA.stride * buffer.height;
-//            WSNPRINTF(out_file, sizeof(out_file), "%s/%s%.4d.%s", out, TO_W_CHAR("dump_"), i, TO_W_CHAR("png"));
-//            if (!WebPSaveImage(&buffer, format, (const char*)out_file)) {
-//                WFPRINTF(stderr, "Error while saving image '%s'\n", out_file);
-//            }
-//            WebPFreeDecBuffer(&buffer);
-//        }
-
         temp2 = image.canvas_width;
         temp3 = image.canvas_height;
         temp4 = image.num_frames;
@@ -122,7 +102,6 @@ JNIEXPORT jint JNICALL Java_com_google_webp_libwebpAnimJNI_WebPSaveImage(JNIEnv 
         buffer.u.RGBA.size = buffer.u.RGBA.stride * buffer.height;
         WSNPRINTF(out_file, sizeof(out_file), "%s/%s%.4d.%s",
                   dump_folder, prefix, i, suffix);
-//        LOGD("Save image %d\n", i);
         if (!WebPSaveImage(&buffer, format, (const char*)out_file)) {
             LOGE("Error while saving image '%s'\n", out_file);
             WFPRINTF(stderr, "Error while saving image '%s'\n", out_file);
