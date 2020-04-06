@@ -13,7 +13,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 
 #ifdef WEBP_HAVE_PNG
 #include <png.h>
@@ -215,8 +214,6 @@ int WebPWritePNG(FILE* fout, const WebPDecBuffer* const buffer) {
 }
 #endif
 
-#include "../log.h"
-
 //------------------------------------------------------------------------------
 // PPM / PAM
 
@@ -333,21 +330,18 @@ int WebPWriteBMP(FILE* fout, const WebPDecBuffer* const buffer) {
 
   // write header
   if (fwrite(bmp_header, sizeof(bmp_header), 1, fout) != 1) {
-      LOGE("Writing bmp failed 1..error %d", errno);
     return 0;
   }
 
   // write pixel array
   for (y = 0; y < height; ++y) {
     if (fwrite(rgba, line_size, 1, fout) != 1) {
-        LOGE("Writing bmp failed 2..error %d", errno);
       return 0;
     }
     // write padding zeroes
     if (bmp_stride != line_size) {
       const uint8_t zeroes[3] = { 0 };
       if (fwrite(zeroes, bmp_stride - line_size, 1, fout) != 1) {
-          LOGE("Writing bmp failed 3..error %d", errno);
         return 0;
       }
     }
@@ -562,10 +556,7 @@ int WebPSaveImage(const WebPDecBuffer* const buffer,
       (out_file_name != NULL) && !WSTRCMP(out_file_name, "-");
   int ok = 1;
 
-  if (buffer == NULL || out_file_name == NULL) {
-    LOGE("Buffer or out_file_name is NULL");
-    return 0;
-  }
+  if (buffer == NULL || out_file_name == NULL) return 0;
 
 #ifdef HAVE_WINCODEC_H
   needs_open_file = (format != PNG);
@@ -575,7 +566,6 @@ int WebPSaveImage(const WebPDecBuffer* const buffer,
     fout = use_stdout ? ImgIoUtilSetBinaryMode(stdout)
                       : WFOPEN(out_file_name, "wb");
     if (fout == NULL) {
-        LOGE("Error opening output file. Error: %d", errno);
       WFPRINTF(stderr, "Error opening output file %s\n",
                (const W_CHAR*)out_file_name);
       return 0;
@@ -597,7 +587,6 @@ int WebPSaveImage(const WebPDecBuffer* const buffer,
   } else if (format == RGBA_4444 || format == RGB_565 || format == rgbA_4444) {
     ok &= WebPWrite16bAsPGM(fout, buffer);
   } else if (format == BMP) {
-      LOGD("Write BMP...");
     ok &= WebPWriteBMP(fout, buffer);
   } else if (format == TIFF) {
     ok &= WebPWriteTIFF(fout, buffer);

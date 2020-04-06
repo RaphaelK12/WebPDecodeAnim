@@ -1,16 +1,18 @@
 {
   "buildFiles": [
-    "/Users/rayan/BitbucketProjects/libwebp/app/CMakeLists.txt"
+    "/Users/rayan/BitbucketProjects/WebPDecodeAnim/app/../../../Library/Android/sdk/ndk-bundle/build/cmake/android.toolchain.cmake",
+    "/Users/rayan/BitbucketProjects/WebPDecodeAnim/app/CMakeLists.txt",
+    "/Users/rayan/BitbucketProjects/WebPDecodeAnim/app/../../../Library/Android/sdk/ndk-bundle/build/cmake/platforms.cmake"
   ],
   "cleanCommands": [
-    "/Users/rayan/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/rayan/BitbucketProjects/libwebp/app/.externalNativeBuild/cmake/debug/arm64-v8a --target clean"
+    "/Users/rayan/Library/Android/sdk/cmake/3.10.2.4988404/bin/cmake --build /Users/rayan/BitbucketProjects/WebPDecodeAnim/app/.externalNativeBuild/cmake/debug/arm64-v8a --target clean"
   ],
   "libraries": {
     "native-lib-Debug-arm64-v8a": {
       "artifactName": "native-lib",
-      "buildCommand": "/Users/rayan/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/rayan/BitbucketProjects/libwebp/app/.externalNativeBuild/cmake/debug/arm64-v8a --target native-lib",
+      "buildCommand": "/Users/rayan/Library/Android/sdk/cmake/3.10.2.4988404/bin/cmake --build /Users/rayan/BitbucketProjects/WebPDecodeAnim/app/.externalNativeBuild/cmake/debug/arm64-v8a --target native-lib",
       "abi": "arm64-v8a",
-      "output": "/Users/rayan/BitbucketProjects/libwebp/app/build/intermediates/cmake/debug/obj/arm64-v8a/libnative-lib.so"
+      "output": "/Users/rayan/BitbucketProjects/WebPDecodeAnim/app/build/intermediates/cmake/debug/obj/arm64-v8a/libnative-lib.so"
     }
   }
 }

@@ -53,9 +53,7 @@ void ClearAnimatedImage(AnimatedImage* const image);
 // Upon successful return, content of 'image' must be deleted by
 // calling 'ClearAnimatedImage'.
 int ReadAnimatedImage(const char filename[], AnimatedImage* const image,
-                      int dump_frames, const char dump_folder[]);
-
-int ReadAnimatedImage2(const char* bytes, size_t size, AnimatedImage* const image);
+                      int dump_frames, const char dump_folder[], const int scaledWidth, const int scaledHeight);
 
 // Given two RGBA buffers, calculate max pixel difference and PSNR.
 // If 'premultiply' is true, R/G/B values will be pre-multiplied by the

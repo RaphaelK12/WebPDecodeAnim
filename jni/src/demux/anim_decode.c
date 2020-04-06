@@ -47,7 +47,7 @@ struct WebPAnimDecoder {
 
 static void DefaultDecoderOptions(WebPAnimDecoderOptions* const dec_options) {
   dec_options->color_mode = MODE_RGBA;
-  dec_options->use_threads = 0;
+  dec_options->use_threads = 1;
 }
 
 int WebPAnimDecoderOptionsInitInternal(WebPAnimDecoderOptions* dec_options,
@@ -76,8 +76,15 @@ static int ApplyDecoderOptions(const WebPAnimDecoderOptions* const dec_options,
                          : &BlendPixelRowPremult;
   WebPInitDecoderConfig(config);
   config->output.colorspace = mode;
-  config->output.is_external_memory = 1;
+  config->output.is_external_memory = 2;
   config->options.use_threads = dec_options->use_threads;
+  config->options.use_scaling = dec_options->use_scaling;
+  config->options.scaled_width = dec_options->scaledWidth;
+  config->options.scaled_height = dec_options->scaledHeight;
+  config->options.bypass_filtering = dec_options->bypass_filtering;
+  config->options.no_fancy_upsampling = dec_options->no_fancy_upsampling;
+  config->options.alpha_dithering_strength = dec_options->alpha_dithering_strength;
+  config->options.dithering_strength = dec_options->dithering_strength;
   // Note: config->output.u.RGBA is set at the time of decoding each frame.
   return 1;
 }

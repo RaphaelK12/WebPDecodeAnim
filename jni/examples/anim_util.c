@@ -19,8 +19,6 @@
 #if defined(WEBP_HAVE_GIF)
 #include <gif_lib.h>
 #endif
-
-#include "../log.h"
 #include "webp/format_constants.h"
 #include "webp/decode.h"
 #include "webp/demux.h"
@@ -62,15 +60,16 @@ static int AllocateFrames(AnimatedImage* const image, uint32_t num_frames) {
       !CheckSizeForOverflow(total_frame_size)) {
     return 0;
   }
-  mem = (uint8_t*)malloc((size_t)total_size);
-  frames = (DecodedFrame*)malloc((size_t)total_frame_size);
+  mem = (uint8_t*)WebPMalloc((size_t)total_size);
+  frames = (DecodedFrame*)WebPMalloc((size_t)total_frame_size);
 
   if (mem == NULL || frames == NULL) {
-    free(mem);
-    free(frames);
+    WebPFree(mem);
+    WebPFree(frames);
     return 0;
   }
-  free(image->raw_mem);
+  WebPFree(image->raw_mem);
+  WebPFree(image->frames);
   image->num_frames = num_frames;
   image->frames = frames;
   for (i = 0; i < num_frames; ++i) {
@@ -84,8 +83,8 @@ static int AllocateFrames(AnimatedImage* const image, uint32_t num_frames) {
 
 void ClearAnimatedImage(AnimatedImage* const image) {
   if (image != NULL) {
-    free(image->raw_mem);
-    free(image->frames);
+    WebPFree(image->raw_mem);
+    WebPFree(image->frames);
     image->num_frames = 0;
     image->frames = NULL;
     image->raw_mem = NULL;
@@ -167,7 +166,7 @@ static int DumpFrame(const char filename[], const char dump_folder[],
   base_name = (base_name == NULL) ? (const W_CHAR*)filename : base_name + 1;
   max_len = WSTRLEN(dump_folder) + 1 + WSTRLEN(base_name)
           + strlen("_frame_") + strlen(".pam") + 8;
-  file_name = (W_CHAR*)malloc(max_len * sizeof(*file_name));
+  file_name = (W_CHAR*)WebPMalloc(max_len * sizeof(*file_name));
   if (file_name == NULL) goto End;
 
   if (WSNPRINTF(file_name, max_len, "%s/%s_frame_%d.pam",
@@ -199,7 +198,7 @@ static int DumpFrame(const char filename[], const char dump_folder[],
   ok = 1;
  End:
   if (f != NULL) fclose(f);
-  free(file_name);
+  WebPFree(file_name);
   return ok;
 }
 
@@ -215,7 +214,7 @@ static int IsWebP(const WebPData* const webp_data) {
 static int ReadAnimatedWebP(const char filename[],
                             const WebPData* const webp_data,
                             AnimatedImage* const image, int dump_frames,
-                            const char dump_folder[]) {
+                            const char dump_folder[], const int scaledWidth, const int scaledHeight) {
   int ok = 0;
   int dump_ok = 1;
   uint32_t frame_index = 0;
@@ -225,7 +224,21 @@ static int ReadAnimatedWebP(const char filename[],
 
   memset(image, 0, sizeof(*image));
 
-  dec = WebPAnimDecoderNew(webp_data, NULL);
+  WebPAnimDecoderOptions dec_options;
+  memset(&dec_options, 0, sizeof(dec_options));
+  dec_options.color_mode = MODE_rgbA;
+  dec_options.use_threads = 1;
+  dec_options.bypass_filtering = 1;
+  dec_options.no_fancy_upsampling = 1;
+  dec_options.dithering_strength = 0;
+  dec_options.alpha_dithering_strength = 0;
+  if (scaledWidth != 0 && scaledHeight != 0) {
+      dec_options.use_scaling = 1;
+      dec_options.scaledWidth = scaledWidth;
+      dec_options.scaledHeight = scaledHeight;
+  }
+
+  dec = WebPAnimDecoderNew(webp_data, &dec_options);
   if (dec == NULL) {
     WFPRINTF(stderr, "Error parsing image: %s\n", (const W_CHAR*)filename);
     goto End;
@@ -285,68 +298,6 @@ static int ReadAnimatedWebP(const char filename[],
  End:
   WebPAnimDecoderDelete(dec);
   return ok;
-}
-
-static int ReadAnimatedWebP2(const WebPData* const webp_data,
-                             AnimatedImage* const image) {
-    int ok = 0;
-    uint32_t frame_index = 0;
-    int prev_frame_timestamp = 0;
-    WebPAnimDecoder* dec;
-    WebPAnimInfo anim_info;
-
-    memset(image, 0, sizeof(*image));
-
-    dec = WebPAnimDecoderNew(webp_data, NULL);
-    if (dec == NULL) {
-        goto End;
-    }
-
-    if (!WebPAnimDecoderGetInfo(dec, &anim_info)) {
-        fprintf(stderr, "Error getting global info about the animation\n");
-        goto End;
-    }
-
-    // Animation properties.
-    image->canvas_width = anim_info.canvas_width;
-    image->canvas_height = anim_info.canvas_height;
-    image->loop_count = anim_info.loop_count;
-    image->bgcolor = anim_info.bgcolor;
-
-    // Allocate frames.
-    if (!AllocateFrames(image, anim_info.frame_count)) return 0;
-
-    // Decode frames.
-    while (WebPAnimDecoderHasMoreFrames(dec)) {
-        DecodedFrame* curr_frame;
-        uint8_t* curr_rgba;
-        uint8_t* frame_rgba;
-        int timestamp;
-
-        if (!WebPAnimDecoderGetNext(dec, &frame_rgba, &timestamp)) {
-            fprintf(stderr, "Error decoding frame #%u\n", frame_index);
-            goto End;
-        }
-        assert(frame_index < anim_info.frame_count);
-        curr_frame = &image->frames[frame_index];
-        curr_rgba = curr_frame->rgba;
-        curr_frame->duration = timestamp - prev_frame_timestamp;
-        curr_frame->is_key_frame = 0;  // Unused.
-        memcpy(curr_rgba, frame_rgba,
-               image->canvas_width * kNumChannels * image->canvas_height);
-
-        // Needed only because we may want to compare with GIF later.
-        CleanupTransparentPixels((uint32_t*)curr_rgba,
-                                 image->canvas_width, image->canvas_height);
-        ++frame_index;
-        prev_frame_timestamp = timestamp;
-    }
-    ok = 1;
-    image->format = ANIM_WEBP;
-
-End:
-    WebPAnimDecoderDelete(dec);
-    return ok;
 }
 
 // -----------------------------------------------------------------------------
@@ -763,7 +714,7 @@ static int ReadAnimatedGIF(const char filename[], AnimatedImage* const image,
 // -----------------------------------------------------------------------------
 
 int ReadAnimatedImage(const char filename[], AnimatedImage* const image,
-                      int dump_frames, const char dump_folder[]) {
+                      int dump_frames, const char dump_folder[], int scaledWidth, int scaledHeight) {
   int ok = 0;
   WebPData webp_data;
 
@@ -777,7 +728,7 @@ int ReadAnimatedImage(const char filename[], AnimatedImage* const image,
 
   if (IsWebP(&webp_data)) {
     ok = ReadAnimatedWebP(filename, &webp_data, image, dump_frames,
-                          dump_folder);
+                          dump_folder, scaledWidth, scaledHeight);
   } else if (IsGIF(&webp_data)) {
     ok = ReadAnimatedGIF(filename, image, dump_frames, dump_folder);
   } else {
@@ -789,30 +740,6 @@ int ReadAnimatedImage(const char filename[], AnimatedImage* const image,
   if (!ok) ClearAnimatedImage(image);
   WebPDataClear(&webp_data);
   return ok;
-}
-
-int ReadAnimatedImage2(const char* bytes, size_t size, AnimatedImage* const image) {
-    int ok = 0;
-    uint8_t* file_data;
-    WebPData webp_data;
-
-    WebPDataInit(&webp_data);
-    memset(image, 0, sizeof(*image));
-
-    file_data = (uint8_t*)malloc(size + 1);
-    memcpy((uint8_t*)file_data, bytes, size);
-    file_data[size] = '\0';
-    webp_data.bytes = file_data;
-    webp_data.size = size;
-
-    if (IsWebP(&webp_data)) {
-        ok = ReadAnimatedWebP2(&webp_data, image);
-    } else {
-        ok = 0;
-    }
-    if (!ok) ClearAnimatedImage(image);
-    WebPDataClear(&webp_data);
-    return ok;
 }
 
 static void Accumulate(double v1, double v2, double* const max_diff,

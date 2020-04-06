@@ -88,7 +88,7 @@ int main(int argc, const char* argv[]) {
       AnimatedImage image;
       const W_CHAR* const file = GET_WARGV(argv, c);
       memset(&image, 0, sizeof(image));
-      WPRINTF("Decoding filformate: %s as %s/%sxxxx.%s\n",
+      WPRINTF("Decoding file: %s as %s/%sxxxx.%s\n",
               file, dump_folder, prefix, suffix);
       if (!ReadAnimatedImage((const char*)file, &image, 0, NULL)) {
         WFPRINTF(stderr, "Error decoding file: %s\n Aborting.\n", file);

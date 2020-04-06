@@ -254,6 +254,13 @@ struct WebPAnimDecoderOptions {
   WEBP_CSP_MODE color_mode;
   int use_threads;           // If true, use multi-threaded decoding.
   uint32_t padding[7];       // Padding for later use.
+  int use_scaling;
+  int scaledWidth;
+  int scaledHeight;
+  int bypass_filtering;
+  int no_fancy_upsampling;
+  int dithering_strength;
+  int alpha_dithering_strength;
 };
 
 // Internal, version-checked, entry point.
