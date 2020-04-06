@@ -13,10 +13,12 @@
 #include "examples/unicode.h"
 #include "imageio/image_enc.h"
 
+#define JAVA_HOST_CLASS_NAME "com/google/WebpProxy"
+
 static AnimatedImage image;
 static jboolean isInitialized = JNI_FALSE;
 
-JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimInit(JNIEnv *jenv, jclass jcls) {
+static jint WebPAnimInit_Native(JNIEnv *jenv, jclass jcls) {
     jint jresult = 0 ;
     if (isInitialized == JNI_FALSE) {
         memset(&image, 0, sizeof(image));
@@ -29,14 +31,7 @@ JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimInit(JNIEnv *jenv, jcla
 }
 
 
-JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimDecodeRGBA(JNIEnv *jenv,
-                                                                    jclass jcls,
-                                                                    jstring   jarg1,
-                                                                    jintArray jarg2,
-                                                                    jintArray jarg3,
-                                                                    jintArray jarg4,
-                                                                    jint      jarg5,
-                                                                    jint      jarg6) {
+static jint WebPAnimDecodeRGBA_Native(JNIEnv *jenv, jclass jcls, jstring inPath, jintArray w, jintArray h, jintArray frameCounts, jint scaledWidth, jint scaledHeight) {
     if (isInitialized) {
         memset(&image, 0, sizeof(image));
     } else {
@@ -47,9 +42,9 @@ JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimDecodeRGBA(JNIEnv *jenv
     int height;
     int nbFrames;
 
-    const char *input_file = (*jenv)->GetStringUTFChars(jenv, jarg1, 0);
+    const char *input_file = (*jenv)->GetStringUTFChars(jenv, inPath, 0);
 
-    if (!ReadAnimatedImage(input_file, &image, 0, NULL, jarg5, jarg6)) {
+    if (!ReadAnimatedImage(input_file, &image, 0, NULL, scaledWidth, scaledHeight)) {
         LOGE("Error decoding file.\n Aborting.\n");
         return -2;
     } else {
@@ -58,15 +53,15 @@ JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimDecodeRGBA(JNIEnv *jenv
         nbFrames = image.num_frames;
         {
             jint jvalue = (jint)width;
-            (*jenv)->SetIntArrayRegion(jenv, jarg2, 0, 1, &jvalue);
+            (*jenv)->SetIntArrayRegion(jenv, w, 0, 1, &jvalue);
         }
         {
             jint jvalue = (jint)height;
-            (*jenv)->SetIntArrayRegion(jenv, jarg3, 0, 1, &jvalue);
+            (*jenv)->SetIntArrayRegion(jenv, h, 0, 1, &jvalue);
         }
         {
             jint jvalue = (jint)nbFrames;
-            (*jenv)->SetIntArrayRegion(jenv, jarg4, 0, 1, &jvalue);
+            (*jenv)->SetIntArrayRegion(jenv, frameCounts, 0, 1, &jvalue);
         }
     }
 
@@ -74,22 +69,22 @@ JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimDecodeRGBA(JNIEnv *jenv
 }
 
 
-JNIEXPORT void JNICALL Java_com_google_WebpProxy_WebPGetDecodedFrame(JNIEnv *jenv, jclass jcls, jint jarg1, jbyteArray jresult) {
+static void WebPGetDecodedFrame_Native(JNIEnv *jenv, jclass jcls, jint index, jbyteArray imageData) {
     size_t size = image.canvas_width * sizeof(uint32_t) * image.canvas_height;
-    (*jenv)->SetByteArrayRegion(jenv, jresult, 0, size, image.frames[jarg1].rgba);
+    (*jenv)->SetByteArrayRegion(jenv, imageData, 0, size, image.frames[index].rgba);
 }
 
 
-JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebGetFrameDuration(JNIEnv *jenv, jclass jcls, jint jarg1) {
-    return image.frames[jarg1].duration;
+static jint WebPGetFrameDuration_Native(JNIEnv *jenv, jclass jcls, jint index) {
+    return image.frames[index].duration;
 }
 
 
-JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPSaveImage(JNIEnv *jenv, jclass jcls, jstring jarg1) {
+static jint WebPSaveImage_Native(JNIEnv *jenv, jclass jcls, jstring dstPath) {
     const W_CHAR* prefix = TO_W_CHAR("dump_");
     const W_CHAR* suffix = TO_W_CHAR("bmp");
     WebPOutputFileFormat format = BMP;
-    const W_CHAR* dump_folder = (*jenv)->GetStringUTFChars(jenv, jarg1, 0);
+    const W_CHAR* dump_folder = (*jenv)->GetStringUTFChars(jenv, dstPath, 0);
 
     for (int i = 0; i < image.num_frames; ++i) {
         W_CHAR out_file[1024];
@@ -115,17 +110,59 @@ JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPSaveImage(JNIEnv *jenv, jcl
 }
 
 
-JNIEXPORT jint JNICALL Java_com_google_WebpProxy_WebPAnimRelease(JNIEnv *jenv, jclass jcls) {
+static jint WebPAnimRelease_Native(JNIEnv *jenv, jclass jcls) {
     isInitialized = JNI_FALSE;
     ClearAnimatedImage(&image);
 
     return 0;
 }
 
+static JNINativeMethod gWebpMethods[] = {
+        { "WebPAnimInit", "()I",
+                (void *)WebPAnimInit_Native },
+
+        { "WebPAnimDecodeRGBA", "(Ljava/lang/String;[I[I[III)I",
+                (void *)WebPAnimDecodeRGBA_Native },
+
+        { "WebPGetDecodedFrame", "(I[B)V",
+                (void *)WebPGetDecodedFrame_Native },
+
+        { "WebPGetFrameDuration", "(I)I",
+                (void *)WebPGetFrameDuration_Native },
+
+        { "WebPSaveImage", "(Ljava/lang/String;)I",
+                (void *)WebPSaveImage_Native },
+
+        { "WebPAnimRelease", "()I",
+                (void *)WebPAnimRelease_Native },
+};
+
+#define WEBP_METHODS_ARRAY_ELEMS(a)  (sizeof(a) / sizeof(a[0]))
+
+static int RegisterWebpMethods(JNIEnv *env) {
+    jclass clz = (*env)->FindClass(env, JAVA_HOST_CLASS_NAME);
+    if (clz == NULL) {
+        LOGE("Class %s not found", JAVA_HOST_CLASS_NAME);
+        return JNI_ERR;
+    }
+
+    if ((*env)->RegisterNatives(env, clz, gWebpMethods, WEBP_METHODS_ARRAY_ELEMS(gWebpMethods))) {
+        LOGE("methods not registered");
+        return JNI_ERR;
+    }
+
+    return JNI_OK;
+}
+
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
     JNIEnv* env;
     int result = -1;
     if ((*vm)->GetEnv(vm, (void**)&env, JNI_VERSION_1_4) != JNI_OK) {
+        return result;
+    }
+
+    result = RegisterWebpMethods(env);
+    if (result != JNI_OK) {
         return result;
     }
 
