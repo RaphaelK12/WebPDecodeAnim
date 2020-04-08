@@ -48,10 +48,13 @@ static int CheckSizeForOverflow(uint64_t size) {
   return (size == (size_t)size);
 }
 
+static uint8_t* mem = NULL;
+static DecodedFrame* frames = NULL;
+static size_t prevTotalSize = 0;
+static size_t prevTotalFrameSize = 0;
+
 static int AllocateFrames(AnimatedImage* const image, uint32_t num_frames) {
   uint32_t i;
-  uint8_t* mem = NULL;
-  DecodedFrame* frames = NULL;
   const uint64_t rgba_size =
       (uint64_t)image->canvas_width * kNumChannels * image->canvas_height;
   const uint64_t total_size = (uint64_t)num_frames * rgba_size * sizeof(*mem);
@@ -60,8 +63,19 @@ static int AllocateFrames(AnimatedImage* const image, uint32_t num_frames) {
       !CheckSizeForOverflow(total_frame_size)) {
     return 0;
   }
-  mem = (uint8_t*)WebPMalloc((size_t)total_size);
-  frames = (DecodedFrame*)WebPMalloc((size_t)total_frame_size);
+  if (mem == NULL)
+    mem = (uint8_t*)WebPMalloc((size_t)total_size);
+  else if ((size_t)total_size > prevTotalSize)
+    mem = (uint8_t*)realloc(mem, (size_t)total_size);
+  prevTotalSize = (size_t)total_size;
+  memset(mem, 0, total_size);
+
+  if (frames == NULL)
+    frames = (DecodedFrame*)WebPMalloc((size_t)total_frame_size);
+  else if ((size_t)total_frame_size > prevTotalFrameSize)
+    frames = (DecodedFrame*)realloc(frames, (size_t)total_frame_size);
+  prevTotalFrameSize = (size_t)total_frame_size;
+  memset(frames, 0, total_frame_size);
 
   if (mem == NULL || frames == NULL) {
     WebPFree(mem);
@@ -88,6 +102,10 @@ void ClearAnimatedImage(AnimatedImage* const image) {
     image->num_frames = 0;
     image->frames = NULL;
     image->raw_mem = NULL;
+    mem = NULL;
+    frames = NULL;
+    prevTotalSize = 0;
+    prevTotalFrameSize = 0;
   }
 }
 
